@@ -17,6 +17,23 @@ export function getKanjiById(kanji: Kanji[], id: string): Kanji | undefined {
   return kanji.find((k) => k.id === id)
 }
 
+export function matchesKanjiQuery(k: Kanji, query: string): boolean {
+  const q = query.toLowerCase().trim()
+  if (!q) return true
+  return (
+    k.character.includes(q) ||
+    k.meanings.some((m) => m.toLowerCase().includes(q)) ||
+    k.onYomi.some((r) => r.toLowerCase().includes(q)) ||
+    k.kunYomi.some((r) => r.toLowerCase().includes(q)) ||
+    k.vocabulary.some(
+      (v) =>
+        v.word.includes(q) ||
+        v.reading.includes(q) ||
+        v.meaning.toLowerCase().includes(q),
+    )
+  )
+}
+
 export function formatReadings(k: Kanji): string {
   const on = k.onYomi.length ? `On: ${k.onYomi.join(', ')}` : ''
   const kun = k.kunYomi.length ? `Kun: ${k.kunYomi.join(', ')}` : ''

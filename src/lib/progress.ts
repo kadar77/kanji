@@ -21,6 +21,7 @@ type ProgressState = {
   settings: UserSettings
   setMastery: (kanjiId: string, level: MasteryLevel) => void
   cycleMastery: (kanjiId: string) => MasteryLevel
+  markStudied: (kanjiId: string) => void
   setAllForLevel: (
     allKanji: Kanji[],
     curriculum: CurriculumRef,
@@ -90,6 +91,12 @@ export const useProgressStore = create<ProgressState>()(
         const next = MASTERY_CYCLE[(idx + 1) % MASTERY_CYCLE.length]
         get().setMastery(kanjiId, next)
         return next
+      },
+
+      markStudied: (kanjiId) => {
+        if (get().getMastery(kanjiId) !== 'new') return
+        set((s) => ({ mastery: { ...s.mastery, [kanjiId]: 'learning' } }))
+        get().recordActivity()
       },
 
       setAllForLevel: (allKanji, curriculum, level) => {

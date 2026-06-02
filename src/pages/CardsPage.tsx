@@ -5,7 +5,7 @@ import { SearchBar } from '@/components/SearchBar'
 import { LevelSystemPicker, LevelPills } from '@/components/LevelPicker'
 import { KanjiCell } from '@/components/KanjiCell'
 import { KanjiPopup } from '@/components/KanjiPopup'
-import { loadKanji } from '@/lib/kanji'
+import { loadKanji, matchesKanjiQuery } from '@/lib/kanji'
 import { filterByCurriculum, getAvailableLevels, LEVEL_SYSTEMS } from '@/lib/levels'
 import { useProgressStore } from '@/lib/progress'
 import type { Kanji, LevelSystemId, MasteryLevel } from '@/types'
@@ -50,22 +50,8 @@ export function CardsPage() {
   const filtered = useMemo(() => {
     let list = pool
     if (filter !== 'all') list = list.filter((k) => (masteryState[k.id] ?? 'new') === filter)
-    const q = query.toLowerCase().trim()
-    if (q) {
-      list = list.filter(
-        (k) =>
-          k.character.includes(q) ||
-          k.meanings.some((m) => m.toLowerCase().includes(q)) ||
-          k.onYomi.some((r) => r.toLowerCase().includes(q)) ||
-          k.kunYomi.some((r) => r.toLowerCase().includes(q)) ||
-          k.vocabulary.some(
-            (v) =>
-              v.word.includes(q) ||
-              v.reading.includes(q) ||
-              v.meaning.toLowerCase().includes(q),
-          ),
-      )
-    }
+    const q = query.trim()
+    if (q) list = list.filter((k) => matchesKanjiQuery(k, q))
     return list
   }, [pool, filter, query, masteryState])
 
@@ -85,6 +71,14 @@ export function CardsPage() {
     ['learning', 'Learning', learning],
     ['known', 'Known', known],
   ]
+  const studyDeckUrl = useMemo(() => {
+    const params = new URLSearchParams()
+    if (filter !== 'all') params.set('filter', filter)
+    const q = query.trim()
+    if (q) params.set('q', q)
+    const qs = params.toString()
+    return `/cards/${settings.levelSystem}/${settings.activeLevel}${qs ? `?${qs}` : ''}`
+  }, [filter, query, settings.activeLevel, settings.levelSystem])
 
   return (
     <div className="screen-inner fade-in">
@@ -146,9 +140,8 @@ export function CardsPage() {
           type="button"
           className="btn btn-primary btn-block btn-lg"
           style={{ marginTop: 18 }}
-          onClick={() =>
-            navigate(`/cards/${settings.levelSystem}/${settings.activeLevel}`)
-          }
+          disabled={filtered.length === 0}
+          onClick={() => navigate(studyDeckUrl)}
         >
           <Icon name="play" size={16} />
           Study {filtered.length} {filtered.length === pool.length ? '' : 'filtered '}cards
