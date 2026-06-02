@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
+  AnswerRecord,
   CurriculumRef,
   GameSession,
   Kanji,
+  LearningStage,
   MasteryLevel,
   TestResult,
   UserSettings,
@@ -13,6 +15,7 @@ import { curriculumKey, filterByCurriculum, parseCurriculumKey } from '@/lib/lev
 
 type ProgressState = {
   mastery: Record<string, MasteryLevel>
+  learningStage: Record<string, LearningStage>
   testHistory: TestResult[]
   kahootBests: Record<string, number>
   writingPracticed: string[]
@@ -27,6 +30,7 @@ type ProgressState = {
     curriculum: CurriculumRef,
     level: MasteryLevel,
   ) => void
+  applyTestMastery: (answers: AnswerRecord[]) => void
   addTestResult: (result: TestResult) => void
   deleteTestResult: (id: string) => void
   clearTestHistory: () => void
@@ -47,6 +51,14 @@ function todayISO(): string {
 
 const MASTERY_CYCLE: MasteryLevel[] = ['new', 'learning', 'known']
 
+function normalizeLearningStage(value: unknown): LearningStage | null {
+  if (value === 1 || value === 2 || value === 3) return value
+  if (value === '1' || value === '2' || value === '3') {
+    return Number(value) as LearningStage
+  }
+  return null
+}
+
 const defaultSettings: UserSettings = {
   levelSystem: 'jlpt',
   activeLevel: 'N5',
@@ -63,6 +75,7 @@ export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
       mastery: {},
+      learningStage: {},
       testHistory: [],
       kahootBests: {},
       writingPracticed: [],
@@ -81,7 +94,19 @@ export const useProgressStore = create<ProgressState>()(
         }),
 
       setMastery: (kanjiId, level) => {
-        set((s) => ({ mastery: { ...s.mastery, [kanjiId]: level } }))
+        set((s) => {
+          const mastery = { ...s.mastery }
+          const learningStage = { ...s.learningStage }
+          if (level === 'new') {
+            delete mastery[kanjiId]
+            delete learningStage[kanjiId]
+          } else {
+            mastery[kanjiId] = level
+            if (level === 'learning') learningStage[kanjiId] = 1
+            else delete learningStage[kanjiId]
+          }
+          return { mastery, learningStage }
+        })
         get().recordActivity()
       },
 
@@ -95,7 +120,10 @@ export const useProgressStore = create<ProgressState>()(
 
       markStudied: (kanjiId) => {
         if (get().getMastery(kanjiId) !== 'new') return
-        set((s) => ({ mastery: { ...s.mastery, [kanjiId]: 'learning' } }))
+        set((s) => ({
+          mastery: { ...s.mastery, [kanjiId]: 'learning' },
+          learningStage: { ...s.learningStage, [kanjiId]: 1 },
+        }))
         get().recordActivity()
       },
 
@@ -103,13 +131,69 @@ export const useProgressStore = create<ProgressState>()(
         set((s) => {
           const pool = filterByCurriculum(allKanji, curriculum)
           const next = { ...s.mastery }
+          const learningStage = { ...s.learningStage }
           for (const k of pool) {
-            if (level === 'new') delete next[k.id]
-            else next[k.id] = level
+            if (level === 'new') {
+              delete next[k.id]
+              delete learningStage[k.id]
+            } else {
+              next[k.id] = level
+              if (level === 'learning') learningStage[k.id] = 1
+              else delete learningStage[k.id]
+            }
           }
-          return { mastery: next }
+          return { mastery: next, learningStage }
         })
         get().recordActivity()
+      },
+
+      applyTestMastery: (answers) => {
+        const results = new Map<string, { missed: boolean }>()
+        for (const answer of answers) {
+          const kanjiId = answer.question.kanjiId
+          const row = results.get(kanjiId) ?? { missed: false }
+          if (answer.selectedIndex !== answer.question.correctIndex) row.missed = true
+          results.set(kanjiId, row)
+        }
+
+        let changed = false
+        set((s) => {
+          const mastery = { ...s.mastery }
+          const learningStage = { ...s.learningStage }
+
+          for (const [kanjiId, result] of results) {
+            const current = mastery[kanjiId] ?? 'new'
+            if (current === 'new') continue
+
+            if (current === 'known') {
+              if (!result.missed) continue
+              mastery[kanjiId] = 'learning'
+              learningStage[kanjiId] = 1
+              changed = true
+              continue
+            }
+
+            if (result.missed) {
+              if (learningStage[kanjiId] !== 1) {
+                learningStage[kanjiId] = 1
+                changed = true
+              }
+              continue
+            }
+
+            const stage = normalizeLearningStage(learningStage[kanjiId]) ?? 1
+            if (stage >= 3) {
+              mastery[kanjiId] = 'known'
+              delete learningStage[kanjiId]
+            } else {
+              learningStage[kanjiId] = (stage + 1) as LearningStage
+            }
+            changed = true
+          }
+
+          return changed ? { mastery, learningStage } : s
+        })
+        if (changed) get().recordActivity()
       },
 
       addTestResult: (result) => {
@@ -157,12 +241,15 @@ export const useProgressStore = create<ProgressState>()(
     }),
     {
       name: 'kanji-progress',
-      version: 6,
+      version: 7,
       migrate: (persisted: unknown) => {
         const state = persisted as Record<string, unknown>
         if (!state || typeof state !== 'object') return persisted
 
         const migrated = { ...state } as Record<string, unknown>
+        if (!migrated.mastery || typeof migrated.mastery !== 'object') {
+          migrated.mastery = {}
+        }
 
         if (!migrated.settings) {
           migrated.settings = defaultSettings
@@ -179,6 +266,18 @@ export const useProgressStore = create<ProgressState>()(
           }
           migrated.kahootBests = newBests
         }
+
+        const mastery = migrated.mastery as Record<string, unknown>
+        const rawLearningStage =
+          migrated.learningStage && typeof migrated.learningStage === 'object'
+            ? (migrated.learningStage as Record<string, unknown>)
+            : {}
+        const learningStage: Record<string, LearningStage> = {}
+        for (const [kanjiId, level] of Object.entries(mastery)) {
+          if (level !== 'learning') continue
+          learningStage[kanjiId] = normalizeLearningStage(rawLearningStage[kanjiId]) ?? 1
+        }
+        migrated.learningStage = learningStage
 
         if (Array.isArray(migrated.testHistory)) {
           migrated.testHistory = (migrated.testHistory as Record<string, unknown>[]).map(

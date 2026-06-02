@@ -27,6 +27,7 @@ export type CurriculumRef = {
 }
 
 export type MasteryLevel = 'new' | 'learning' | 'known'
+export type LearningStage = 1 | 2 | 3
 
 export type VocabularyWord = {
   word: string

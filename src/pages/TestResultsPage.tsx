@@ -24,6 +24,7 @@ export function TestResultsPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const addTestResult = useProgressStore((s) => s.addTestResult)
+  const applyTestMastery = useProgressStore((s) => s.applyTestMastery)
   const settings = useProgressStore((s) => s.settings)
   const testHistory = useProgressStore((s) => s.testHistory)
   const savedRef = useRef(false)
@@ -53,16 +54,21 @@ export function TestResultsPage() {
     : 0
   const total = data ? data.answers.length : 0
   const pct = total > 0 ? Math.round((score / total) * 100) : 0
-  const missedKanjiIds = data
-    ? data.answers
-        .filter((a) => a.selectedIndex !== a.question.correctIndex)
-        .map((a) => a.question.kanjiId)
-    : []
+  const missedKanjiIds = useMemo(
+    () =>
+      data
+        ? data.answers
+            .filter((a) => a.selectedIndex !== a.question.correctIndex)
+            .map((a) => a.question.kanjiId)
+        : [],
+    [data],
+  )
 
   useEffect(() => {
     // Only save when arriving from a live test finish — never re-save when
     // reopening a stored result from history.
     if (!liveState || savedRef.current) return
+    savedRef.current = true
     const result: TestResult = {
       id: `test-${Date.now()}`,
       curriculum: liveState.curriculum,
@@ -74,8 +80,8 @@ export function TestResultsPage() {
       answers: liveState.answers,
     }
     addTestResult(result)
-    savedRef.current = true
-  }, [liveState, addTestResult, score, total, missedKanjiIds])
+    applyTestMastery(liveState.answers)
+  }, [liveState, addTestResult, applyTestMastery, score, total, missedKanjiIds])
 
   const byType = useMemo(() => {
     if (!data) return [] as { type: TestType; correct: number; total: number }[]
