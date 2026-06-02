@@ -228,7 +228,7 @@ export function GamePlayPage() {
           const correct = picked !== null && idx === q.correctIndex && answered
           const wrong = picked === idx && idx !== q.correctIndex
           const optFuri =
-            settings.showFurigana && q.type === 'meaning'
+            settings.showFurigana && (q.type === 'meaning' || q.type === 'recognition')
               ? (q.optionsFurigana?.[idx] ?? null)
               : null
           return (

@@ -112,16 +112,18 @@ export function generateQuestion(k: Kanji, pool: Kanji[], type: TestType): Quest
   }
 
   if (type === 'recognition') {
-    const correct = k.character
-    const distractors = pickDistractors(pool, k, 3, (x) => x.character).map((x) => x.character)
-    const { options, correctIndex } = buildOptions(correct, distractors)
+    // Options are kanji; carry each one's reading so furigana can annotate them
+    // (the reading doesn't reveal which kanji matches the meaning prompt).
+    const distractorKanji = pickDistractors(pool, k, 3, (x) => x.character)
+    const all = shuffle([k, ...distractorKanji])
     return {
       id,
       type,
       prompt: primaryMeaning(k),
       promptSubMn: meaningsMn?.[0],
-      options,
-      correctIndex,
+      options: all.map((x) => x.character),
+      optionsFurigana: all.map((x) => primaryReading(x) || null),
+      correctIndex: all.findIndex((x) => x.id === k.id),
       kanjiId: k.id,
       explanation: `${k.character}: ${k.meanings.join(', ')}`,
       meaningsMn,

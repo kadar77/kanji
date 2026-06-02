@@ -181,7 +181,7 @@ export function TestRunPage() {
               ? mnIfDifferent(txt, q.optionsMn?.[idx] ?? undefined)
               : null
           const optFuri =
-            settings.showFurigana && q.type === 'meaning'
+            settings.showFurigana && (q.type === 'meaning' || q.type === 'recognition')
               ? (q.optionsFurigana?.[idx] ?? null)
               : null
           const stacked = !!optMn || !!optFuri
