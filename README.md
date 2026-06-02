@@ -5,7 +5,7 @@ A web app for studying Japanese kanji across three independent level systems:
 (漢検 10級–1級). Client-only React/Vite SPA — no account, no backend for the
 core app; your progress lives in your browser.
 
-🌐 **Live:** <https://kanji.kumogallery.com>
+🌐 **Live:** <https://kanji-370.pages.dev>
 
 ## Features
 

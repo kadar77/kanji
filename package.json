@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "A solo-learner web app for studying Japanese kanji across JLPT, school-grade, and Kanken level systems.",
   "license": "MIT",
-  "homepage": "https://kanji.kumogallery.com",
+  "homepage": "https://kanji-370.pages.dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
