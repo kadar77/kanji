@@ -1,26 +1,37 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
 import { LevelChip } from '@/components/LevelChip'
 import { MasteryButton } from '@/components/MasteryButton'
-import { loadKanji } from '@/lib/kanji'
+import { loadKanji, matchesKanjiQuery } from '@/lib/kanji'
 import { filterByCurriculum } from '@/lib/levels'
 import { mnListIfDifferent, mnIfDifferent } from '@/lib/mn'
 import { useProgressStore } from '@/lib/progress'
-import type { Kanji, LevelSystemId } from '@/types'
+import type { Kanji, LevelSystemId, MasteryLevel } from '@/types'
+
+type DeckFilter = 'all' | 'new' | 'learning' | 'known'
+
+function parseDeckFilter(value: string | null): DeckFilter {
+  return value === 'new' || value === 'learning' || value === 'known' ? value : 'all'
+}
 
 export function CardDeckPage() {
   const { system, level } = useParams<{ system: string; level: string }>()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
   const curriculum = useMemo(
     () => ({ system: (system as LevelSystemId) ?? 'jlpt', level: level ?? 'N5' }),
     [system, level],
   )
+  const filter = parseDeckFilter(params.get('filter'))
+  const query = params.get('q') ?? ''
+  const startId = params.get('start')
   const [kanji, setKanji] = useState<Kanji[]>([])
   const [index, setIndex] = useState(0)
-  const [flipped, setFlipped] = useState(false)
+  const [flippedId, setFlippedId] = useState<string | null>(null)
   const [dragDx, setDragDx] = useState(0)
   const { getMastery, cycleMastery, settings } = useProgressStore()
+  const markStudied = useProgressStore((s) => s.markStudied)
 
   const dragStart = useRef<{ x: number; y: number } | null>(null)
   const dragging = useRef(false)
@@ -28,10 +39,26 @@ export function CardDeckPage() {
   const SWIPE_THRESHOLD = 70
 
   useEffect(() => {
-    loadKanji().then((all) => setKanji(filterByCurriculum(all, curriculum)))
-  }, [curriculum])
+    loadKanji().then((all) => {
+      let deck = filterByCurriculum(all, curriculum)
+      if (filter !== 'all') {
+        const getCurrentMastery = useProgressStore.getState().getMastery
+        deck = deck.filter((k) => getCurrentMastery(k.id) === filter)
+      }
+      const q = query.trim()
+      if (q) deck = deck.filter((k) => matchesKanjiQuery(k, q))
+      const startIndex = startId ? deck.findIndex((k) => k.id === startId) : -1
+      setKanji(deck)
+      setIndex(startIndex >= 0 ? startIndex : 0)
+      setDragDx(0)
+      setFlippedId(null)
+    })
+  }, [curriculum, filter, query, startId])
 
-  useEffect(() => setFlipped(false), [index])
+  useEffect(() => {
+    const current = kanji[index]
+    if (current) markStudied(current.id)
+  }, [index, kanji, markStudied])
 
   const go = useCallback(
     (delta: number) =>
@@ -83,7 +110,9 @@ export function CardDeckPage() {
       suppressNextClick.current = false
       return
     }
-    setFlipped((f) => !f)
+    const current = kanji[index]
+    if (!current) return
+    setFlippedId((id) => (id === current.id ? null : current.id))
   }
 
   useEffect(() => {
@@ -92,12 +121,14 @@ export function CardDeckPage() {
       if (e.key === 'ArrowLeft') go(-1)
       if (e.key === ' ') {
         e.preventDefault()
-        setFlipped((f) => !f)
+        const current = kanji[index]
+        if (!current) return
+        setFlippedId((id) => (id === current.id ? null : current.id))
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go])
+  }, [go, index, kanji])
 
   if (!kanji.length) {
     return (
@@ -110,7 +141,8 @@ export function CardDeckPage() {
   }
 
   const k = kanji[index]
-  const m = getMastery(k.id)
+  const m = getMastery(k.id) as MasteryLevel
+  const flipped = flippedId === k.id
   const showMn = settings.showMongolian
   const meaningsMnVisible = showMn ? mnListIfDifferent(k.meanings, k.meaningsMn) : []
 

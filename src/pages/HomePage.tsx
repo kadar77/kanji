@@ -115,11 +115,12 @@ export function HomePage() {
           <button
             type="button"
             className="continue-card"
-            onClick={() =>
+            onClick={() => {
+              const params = new URLSearchParams({ start: continueKanji.id })
               navigate(
-                `/cards/${settings.levelSystem}/${settings.activeLevel}/${continueKanji.id}`,
+                `/cards/${settings.levelSystem}/${settings.activeLevel}?${params.toString()}`,
               )
-            }
+            }}
           >
             <div className="lhs">
               <div className="label-up">Next up</div>
