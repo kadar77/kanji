@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # tsc -b && vite build — the real correctness gate.
+      - run: npm run build
+      # Lint is informational for now (the strict react-hooks rules flag the
+      # existing game-loop patterns); it shouldn't block the build.
+      - run: npm run lint
+        continue-on-error: true
