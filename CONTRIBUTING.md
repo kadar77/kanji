@@ -19,10 +19,21 @@ set `VITE_HAYAOSHI_API`.
 
 ## Workflow
 
+`dev` is the integration branch; `main` is production (auto-deployed).
+
 1. Open an issue first for anything non-trivial so we can align on the approach.
-2. Branch off `main`, keep PRs focused, and write a clear description.
+2. Branch off `dev` and open your PR **against `dev`**. Keep PRs focused.
 3. Make sure `npm run build` passes before pushing.
 4. Match the surrounding code style (TypeScript, existing component patterns).
+
+### Releases (maintainer)
+
+Releases happen by promoting `dev` → `main`:
+
+1. On `dev`, bump the version: `npm version <patch|minor|major> --no-git-tag-version`, commit.
+2. Open a `dev` → `main` PR and merge it.
+3. On merge, `main` deploys and CI tags `vX.Y.Z` + publishes a GitHub Release
+   with auto-generated notes.
 
 ## Project conventions
 
