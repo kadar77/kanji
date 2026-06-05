@@ -15,7 +15,7 @@ export interface RoomConfig {
 export interface Profile {
   name: string
   avatar: AvatarName
-  color: string
+  // Color isn't chosen by the client — the server assigns it on join.
 }
 
 export interface PublicOption {
@@ -59,7 +59,7 @@ export interface RoomSummary {
 
 // ─── Client → Server ──────────────────────────────────────────────────
 export type ClientMessage =
-  | { t: 'join'; name: string; avatar: string; color: string }
+  | { t: 'join'; name: string; avatar: string }
   | { t: 'start' }
   | { t: 'answer'; qi: number; idx: number }
   | { t: 'leave' }

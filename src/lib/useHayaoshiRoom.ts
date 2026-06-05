@@ -171,7 +171,7 @@ export function useHayaoshiRoom(conn: HayaoshiConn): HayaoshiRoom {
         // Fresh player with no token yet → register with the chosen profile.
         if (conn.role === 'player' && !token && profileRef.current) {
           const p = profileRef.current
-          ws.send(JSON.stringify({ t: 'join', name: p.name, avatar: p.avatar, color: p.color }))
+          ws.send(JSON.stringify({ t: 'join', name: p.name, avatar: p.avatar }))
         }
       }
       ws.onmessage = (e) => {
