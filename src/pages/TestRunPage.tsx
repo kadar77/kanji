@@ -6,7 +6,7 @@ import { loadKanji } from '@/lib/kanji'
 import { mnIfDifferent } from '@/lib/mn'
 import { buildQuestionDeck } from '@/lib/questions'
 import { useProgressStore } from '@/lib/progress'
-import type { AnswerRecord, CurriculumRef, LevelSystemId, Question } from '@/types'
+import type { AnswerRecord, CurriculumRef, LevelSystemId, Question, TestType } from '@/types'
 
 export function TestRunPage() {
   const [params] = useSearchParams()
@@ -16,6 +16,7 @@ export function TestRunPage() {
     level: params.get('level') ?? 'N5',
   }
   const weakOnly = params.get('weak') === 'true'
+  const testType = (params.get('type') ?? 'mixed') as TestType | 'mixed'
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [index, setIndex] = useState(0)
@@ -31,6 +32,7 @@ export function TestRunPage() {
         settings.testQuestionCount,
         weakOnly,
         getMastery,
+        testType,
       )
       if (deck.length === 0) {
         navigate('/tests')
@@ -39,7 +41,7 @@ export function TestRunPage() {
       setQuestions(deck)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curriculum.system, curriculum.level, weakOnly, settings.testQuestionCount])
+  }, [curriculum.system, curriculum.level, weakOnly, testType, settings.testQuestionCount])
 
   const q = questions[index]
 
@@ -90,7 +92,12 @@ export function TestRunPage() {
         setPicked(null)
       } else {
         navigate('/tests/results', {
-          state: { curriculum, weakOnly, answers: next },
+          state: {
+            curriculum,
+            weakOnly,
+            answers: next,
+            testType: testType === 'mixed' ? undefined : testType,
+          },
         })
       }
     }, 1100)

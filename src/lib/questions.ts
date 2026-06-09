@@ -173,6 +173,9 @@ export function buildQuestionDeck(
   count: number,
   weakOnly: boolean,
   getMastery: (id: string) => string,
+  /** 'mixed' cycles all five types round-robin; otherwise every question uses
+   *  the given type (with generateQuestion's per-kanji fallbacks). */
+  type: TestType | 'mixed' = 'mixed',
 ): Question[] {
   let pool = filterByCurriculum(allKanji, curriculum)
   if (weakOnly) {
@@ -182,7 +185,9 @@ export function buildQuestionDeck(
 
   const types: TestType[] = ['meaning', 'reading', 'recognition', 'vocabulary', 'reading-reverse']
   const selected = shuffle(pool).slice(0, Math.min(count, pool.length))
-  return selected.map((k, i) => generateQuestion(k, pool, types[i % types.length]))
+  return selected.map((k, i) =>
+    generateQuestion(k, pool, type === 'mixed' ? types[i % types.length] : type),
+  )
 }
 
 export function buildMixedGameDeck(
