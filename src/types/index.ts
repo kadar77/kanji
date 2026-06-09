@@ -74,6 +74,11 @@ export type Question = {
    * English/Mongolian can still identify the answer. Meaning questions only.
    */
   optionsFurigana?: (string | null)[]
+  /**
+   * Same length as options. A secondary line under each option — used by the
+   * vocabulary test to show the word's English meaning beneath its reading.
+   */
+  optionsSub?: (string | null)[]
   correctIndex: number
   kanjiId: string
   explanation: string
@@ -96,22 +101,6 @@ export type TestResult = {
   missedKanjiIds: string[]
   /** Per-question answers, persisted so the review can be reopened later. */
   answers?: AnswerRecord[]
-}
-
-export type GameAnswer = {
-  questionId: string
-  correct: boolean
-  points: number
-  timeMs: number
-}
-
-export type GameSession = {
-  curriculum: CurriculumRef
-  totalScore: number
-  correctCount: number
-  totalQuestions: number
-  avgTimeMs: number
-  answers: GameAnswer[]
 }
 
 export type ThemePref = 'light' | 'dark' | 'system'

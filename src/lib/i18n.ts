@@ -106,28 +106,6 @@ export const translations = {
       newTest: 'New test',
       studyCards: 'Study cards',
     },
-    // GameSetupPage
-    gameSetup: {
-      title: 'Kanji Game',
-      subtitle: 'Kahoot-style timed quiz — score points for speed and accuracy',
-      personalBest: (pts: number) => `Personal best: ${pts.toLocaleString()} pts`,
-      questions: 'Questions',
-      secondsPerQuestion: '15 seconds per question',
-      startGame: 'Start game',
-    },
-    // GameResultsPage
-    gameResults: {
-      title: 'Game over',
-      points: 'points',
-      accuracy: 'Accuracy',
-      correct: 'Correct',
-      avgTime: 'Avg time',
-      newBest: (key: string) => `New personal best for ${key}!`,
-      noResults: 'No game results.',
-      back: 'Back',
-      playAgain: 'Play again',
-      home: 'Home',
-    },
   },
 } as const
 

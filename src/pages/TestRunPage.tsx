@@ -74,12 +74,15 @@ export function TestRunPage() {
   const isRecognition = q.type === 'recognition' || q.type === 'reading-reverse'
   const pct = ((index + (picked !== null ? 1 : 0)) / questions.length) * 100
 
-  // MN hint — never on 'meaning' tests (would give the answer away),
-  // and only when it differs from the English version.
+  // MN hint under the prompt — not on 'meaning' (would give the answer away)
+  // nor 'vocabulary' (its MN lives on each option), and only when it differs
+  // from the English version.
   const enRef = q.type === 'recognition' ? q.prompt : q.promptSub
   const mnRef = q.promptSubMn ?? q.meaningsMn?.[0]
   const mnHint =
-    settings.showMongolian && q.type !== 'meaning' ? mnIfDifferent(enRef, mnRef) : null
+    settings.showMongolian && q.type !== 'meaning' && q.type !== 'vocabulary'
+      ? mnIfDifferent(enRef, mnRef)
+      : null
 
   const pick = (i: number) => {
     if (picked !== null) return
@@ -111,7 +114,7 @@ export function TestRunPage() {
         : q.type === 'recognition'
           ? 'Which kanji means…'
           : q.type === 'vocabulary'
-            ? 'Pick the vocabulary'
+            ? 'What is this word?'
             : 'Which kanji is read…'
 
   return (
@@ -156,7 +159,14 @@ export function TestRunPage() {
         {isRecognition ? (
           <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em' }}>{q.prompt}</div>
         ) : (
-          <div className="jp" style={{ fontSize: 96, lineHeight: 1, fontWeight: 500 }}>
+          <div
+            className="jp"
+            style={{
+              fontSize: q.type === 'vocabulary' ? 52 : 96,
+              lineHeight: 1.05,
+              fontWeight: 500,
+            }}
+          >
             {q.prompt}
           </div>
         )}
@@ -183,15 +193,19 @@ export function TestRunPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {q.options.map((txt, idx) => {
           const picked_this = picked === idx
+          // Vocabulary options show the word's English meaning under its reading.
+          const optSub = q.type === 'vocabulary' ? (q.optionsSub?.[idx] ?? null) : null
           const optMn =
             settings.showMongolian && q.type === 'meaning'
               ? mnIfDifferent(txt, q.optionsMn?.[idx] ?? undefined)
-              : null
+              : settings.showMongolian && q.type === 'vocabulary'
+                ? mnIfDifferent(optSub ?? undefined, q.optionsMn?.[idx] ?? undefined)
+                : null
           const optFuri =
             settings.showFurigana && (q.type === 'meaning' || q.type === 'recognition')
               ? (q.optionsFurigana?.[idx] ?? null)
               : null
-          const stacked = !!optMn || !!optFuri
+          const stacked = !!optMn || !!optFuri || !!optSub
           return (
             <button
               key={idx}
@@ -221,12 +235,18 @@ export function TestRunPage() {
                 <span
                   className={isRecognition ? 'jp' : ''}
                   style={{
-                    fontSize: isRecognition ? 26 : q.type === 'reading' ? 18 : 14,
+                    fontSize:
+                      isRecognition ? 26 : q.type === 'reading' || q.type === 'vocabulary' ? 18 : 14,
                     fontWeight: 500,
                   }}
                 >
                   {txt}
                 </span>
+                {optSub && (
+                  <span className="muted" style={{ fontSize: 13 }}>
+                    {optSub}
+                  </span>
+                )}
                 {optMn && (
                   <span
                     className="muted"
