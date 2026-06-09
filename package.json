@@ -1,7 +1,7 @@
 {
   "name": "kanji",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A solo-learner web app for studying Japanese kanji across JLPT, school-grade, and Kanken level systems.",
   "license": "MIT",
   "homepage": "https://kanji-370.pages.dev",
