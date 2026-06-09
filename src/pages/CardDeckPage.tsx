@@ -262,12 +262,12 @@ export function CardDeckPage() {
         </button>
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn btn-outline"
           onClick={() =>
             navigate(`/cards/${curriculum.system}/${curriculum.level}/${k.id}`)
           }
         >
-          Details
+          <Icon name="eye" size={16} /> Details
         </button>
         <button
           type="button"

@@ -12,7 +12,7 @@ import {
   LEVEL_SYSTEMS,
 } from '@/lib/levels'
 import { useEffectiveDark, useProgressStore } from '@/lib/progress'
-import { buildQuestions, HAYAOSHI_AVATARS, randColor } from '@/lib/hayaoshi'
+import { buildQuestions, HAYAOSHI_AVATARS } from '@/lib/hayaoshi'
 import { TILE_COLORS } from '@/lib/hayaoshi'
 import type { AvatarName } from '@/lib/hayaoshi'
 import { createRoom, getRoomSummary } from '@/lib/hayaoshi-api'
@@ -29,6 +29,9 @@ type Step =
   | 'join-profile'
 
 const COUNTS = [10, 15, 20, 25]
+// Neutral avatar tint used while picking a profile (no player color yet —
+// the server assigns one on join).
+const NEUTRAL_AVATAR = '#6e7681'
 
 // Rank by score; break ties by name so ordering is deterministic and never
 // just falls back to join order (which always put the host first).
@@ -551,10 +554,9 @@ function HProfile({
   // Prefill from the player's last game so they don't retype each time.
   const [name, setName] = useState(() => loadLastName())
   const [avatar, setAvatar] = useState<AvatarName>(() => loadLastAvatar())
-  const [color] = useState(() => randColor())
   const ok = name.trim().length >= 1
   const submit = () => {
-    const profile = { name: name.trim(), avatar, color }
+    const profile = { name: name.trim(), avatar }
     saveLastProfile(profile.name, avatar)
     onSubmit(profile)
   }
@@ -563,7 +565,8 @@ function HProfile({
       <HHeader title={title} onBack={onBack} />
       <div className="vs-body">
         <div className="vs-center" style={{ marginBottom: 6 }}>
-          <PlayerAvatar avatar={avatar} color={color} size={84} ring="rgba(255,255,255,0.25)" />
+          {/* Neutral while choosing — the server assigns a color on join. */}
+          <PlayerAvatar avatar={avatar} color={NEUTRAL_AVATAR} size={84} ring="rgba(255,255,255,0.25)" />
         </div>
         <div className="vs-label">Nickname</div>
         <input
@@ -584,7 +587,7 @@ function HProfile({
               fontWeight: 400,
             }}
           >
-            · your colour is assigned automatically
+            · your colour is assigned when you join
           </span>
         </div>
         <div className="vs-avatar-grid">
@@ -595,7 +598,7 @@ function HProfile({
               className={`vs-avatar-pick ${avatar === a ? 'sel' : ''}`}
               onClick={() => setAvatar(a)}
             >
-              <PlayerAvatar avatar={a} color={color} size={46} />
+              <PlayerAvatar avatar={a} color={NEUTRAL_AVATAR} size={46} />
             </button>
           ))}
         </div>

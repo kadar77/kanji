@@ -9,6 +9,7 @@ type ResultsState = {
   curriculum: CurriculumRef
   weakOnly: boolean
   answers: AnswerRecord[]
+  testType?: TestType
 }
 
 const TYPE_LABELS: Record<TestType, string> = {
@@ -72,6 +73,7 @@ export function TestResultsPage() {
     const result: TestResult = {
       id: `test-${Date.now()}`,
       curriculum: liveState.curriculum,
+      ...(liveState.testType ? { testType: liveState.testType } : {}),
       score,
       total,
       weakOnly: liveState.weakOnly,

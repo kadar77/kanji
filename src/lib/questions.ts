@@ -58,11 +58,6 @@ function formatReadingExplanation(k: Kanji): string {
   return parts.join(' · ')
 }
 
-function vocabLabel(k: Kanji): string {
-  const v = k.vocabulary[0]
-  return v ? `${v.word}（${v.reading}）` : ''
-}
-
 export function generateQuestion(k: Kanji, pool: Kanji[], type: TestType): Question {
   const id = `${type}-${k.id}-${Date.now()}`
   const meaningsMn = k.meaningsMn && k.meaningsMn.length > 0 ? k.meaningsMn : undefined
@@ -131,19 +126,25 @@ export function generateQuestion(k: Kanji, pool: Kanji[], type: TestType): Quest
   }
 
   if (type === 'vocabulary') {
-    const correct = vocabLabel(k)
-    const poolWithVocab = pool.filter((x) => x.id !== k.id && x.vocabulary.length > 0)
-    const distractors = shuffle(poolWithVocab).slice(0, 3).map(vocabLabel)
-    const { options, correctIndex } = buildOptions(correct, distractors)
+    // Prompt is the word (in kanji); each option shows the reading (kana) +
+    // meaning. The word's own reading/meaning aren't in the prompt, so the
+    // kanji can't give the answer away.
+    const correct = k.vocabulary[0]
+    const distractors = shuffle(pool.filter((x) => x.id !== k.id && x.vocabulary.length > 0))
+      .map((x) => x.vocabulary[0])
+      .filter((v) => v.reading !== correct.reading && v.meaning !== correct.meaning)
+      .slice(0, 3)
+    const all = shuffle([correct, ...distractors])
     return {
       id,
       type,
-      prompt: k.character,
-      promptSub: k.meanings[0],
-      options,
-      correctIndex,
+      prompt: correct.word,
+      options: all.map((v) => v.reading),
+      optionsSub: all.map((v) => v.meaning),
+      optionsMn: all.map((v) => v.meaningMn ?? null),
+      correctIndex: all.findIndex((v) => v === correct),
       kanjiId: k.id,
-      explanation: `${k.character}: ${k.vocabulary[0].word}（${k.vocabulary[0].reading}）— ${k.vocabulary[0].meaning}`,
+      explanation: `${correct.word}（${correct.reading}）— ${correct.meaning}`,
       meaningsMn,
     }
   }
@@ -173,6 +174,9 @@ export function buildQuestionDeck(
   count: number,
   weakOnly: boolean,
   getMastery: (id: string) => string,
+  /** 'mixed' cycles all five types round-robin; otherwise every question uses
+   *  the given type (with generateQuestion's per-kanji fallbacks). */
+  type: TestType | 'mixed' = 'mixed',
 ): Question[] {
   let pool = filterByCurriculum(allKanji, curriculum)
   if (weakOnly) {
@@ -182,18 +186,8 @@ export function buildQuestionDeck(
 
   const types: TestType[] = ['meaning', 'reading', 'recognition', 'vocabulary', 'reading-reverse']
   const selected = shuffle(pool).slice(0, Math.min(count, pool.length))
-  return selected.map((k, i) => generateQuestion(k, pool, types[i % types.length]))
+  return selected.map((k, i) =>
+    generateQuestion(k, pool, type === 'mixed' ? types[i % types.length] : type),
+  )
 }
 
-export function buildMixedGameDeck(
-  allKanji: Kanji[],
-  curriculum: CurriculumRef,
-  count: number,
-): Question[] {
-  const pool = filterByCurriculum(allKanji, curriculum)
-  if (pool.length < 4) return []
-
-  const types: TestType[] = ['meaning', 'reading', 'recognition', 'vocabulary', 'reading-reverse']
-  const selected = shuffle(pool).slice(0, Math.min(count, pool.length))
-  return selected.map((k, i) => generateQuestion(k, pool, types[i % types.length]))
-}

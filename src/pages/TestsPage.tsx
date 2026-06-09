@@ -6,12 +6,32 @@ import { Toggle } from '@/components/Toggle'
 import { loadKanji } from '@/lib/kanji'
 import { filterByCurriculum, getAvailableLevels, LEVEL_SYSTEMS } from '@/lib/levels'
 import { useProgressStore } from '@/lib/progress'
-import type { Kanji, LevelSystemId, TestResult } from '@/types'
+import type { Kanji, LevelSystemId, TestResult, TestType } from '@/types'
+
+// Test-type choices for the start dropdown. 'mixed' is always the default and
+// is intentionally not persisted.
+const TEST_TYPES: { value: TestType | 'mixed'; label: string }[] = [
+  { value: 'mixed', label: 'Mixed — all types' },
+  { value: 'meaning', label: 'Meaning' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'recognition', label: 'Recognition' },
+  { value: 'vocabulary', label: 'Vocabulary' },
+  { value: 'reading-reverse', label: 'Reading → Kanji' },
+]
+const SHORT_TYPE: Record<TestType, string> = {
+  meaning: 'Meaning',
+  reading: 'Reading',
+  recognition: 'Recognition',
+  vocabulary: 'Vocabulary',
+  'reading-reverse': 'Reading → Kanji',
+}
 
 export function TestsPage() {
   const navigate = useNavigate()
   const [kanji, setKanji] = useState<Kanji[]>([])
   const { settings, setSettings, testHistory, getMastery } = useProgressStore()
+  // Always defaults to mixed each visit (not saved to settings).
+  const [testType, setTestType] = useState<TestType | 'mixed'>('mixed')
 
   useEffect(() => {
     loadKanji().then(setKanji)
@@ -46,6 +66,7 @@ export function TestsPage() {
       system: settings.levelSystem,
       level: settings.activeLevel,
       weak: String(!settings.includeKnownInTests),
+      type: testType,
     })
     navigate(`/tests/run?${params}`)
   }
@@ -94,13 +115,45 @@ export function TestsPage() {
         >
           試
         </div>
-        <div className="label-up muted">Mixed quiz</div>
+        <div className="label-up muted">Quiz</div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
           <span className="bignum">{askedCount}</span>
           <span className="muted" style={{ fontSize: 13 }}>questions</span>
         </div>
-        <div className="muted" style={{ fontSize: 13, marginTop: 10, lineHeight: 1.5 }}>
-          Questions cycle through all five test types. Change the default count in{' '}
+
+        <div style={{ marginTop: 16 }}>
+          <label htmlFor="test-type" className="label-up muted" style={{ display: 'block', marginBottom: 6 }}>
+            Test type
+          </label>
+          <select
+            id="test-type"
+            value={testType}
+            onChange={(e) => setTestType(e.target.value as TestType | 'mixed')}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: 'var(--r-md)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--ink)',
+              font: 'inherit',
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            {TEST_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="muted" style={{ fontSize: 13, marginTop: 12, lineHeight: 1.5 }}>
+          {testType === 'mixed'
+            ? 'Questions cycle through all five test types. '
+            : `Every question is a ${SHORT_TYPE[testType]} question. `}
+          Change the default count in{' '}
           <button
             type="button"
             onClick={() => navigate('/profile')}
@@ -278,7 +331,8 @@ function ResultRow({
     >
       <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 14 }}>
-          Mixed · {result.curriculum.system}:{result.curriculum.level}
+          {result.testType ? SHORT_TYPE[result.testType] : 'Mixed'} · {result.curriculum.system}:
+          {result.curriculum.level}
           {result.weakOnly && (
             <span
               className="muted"

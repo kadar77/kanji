@@ -4,7 +4,6 @@ import { persist } from 'zustand/middleware'
 import type {
   AnswerRecord,
   CurriculumRef,
-  GameSession,
   Kanji,
   LearningStage,
   MasteryLevel,
@@ -300,10 +299,6 @@ export const useProgressStore = create<ProgressState>()(
     },
   ),
 )
-
-export function recordGameSession(session: GameSession) {
-  useProgressStore.getState().updateKahootBest(session.curriculum, session.totalScore)
-}
 
 export function useCurriculum(): CurriculumRef {
   const { settings } = useProgressStore()
